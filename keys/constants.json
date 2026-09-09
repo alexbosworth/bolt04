@@ -1,0 +1,10 @@
+{
+  "cipherAlgorithm": "chacha20",
+  "curveOrder": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+  "hashAlgorithm": "sha256",
+  "hexBase": 16,
+  "lengthCipherIvBytes": 16,
+  "lengthKeyBytes": 32,
+  "lengthKeyHex": 64,
+  "lengthPointBytes": 33
+}

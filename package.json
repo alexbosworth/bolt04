@@ -1,0 +1,40 @@
+{
+  "author": {
+    "name": "Alex Bosworth",
+    "url": "https://twitter.com/alexbosworth"
+  },
+  "bugs": {
+    "url": "https://github.com/alexbosworth/bolt04/issues"
+  },
+  "dependencies": {
+    "bolt01": "4.0.0",
+    "bolt07": "2.0.0",
+    "tiny-secp256k1": "2.2.4"
+  },
+  "description": "Utilities for working with bolt04 data formats",
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "blinded-path",
+    "bolt",
+    "lightning",
+    "lightning-network",
+    "lnd",
+    "onion",
+    "onion-message",
+    "route-blinding",
+    "sphinx"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "name": "bolt04",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexbosworth/bolt04.git"
+  },
+  "scripts": {
+    "test": "node --experimental-test-coverage --test"
+  },
+  "version": "1.0.0"
+}

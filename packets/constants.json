@@ -1,0 +1,19 @@
+{
+  "hashAlgorithm": "sha256",
+  "lengthAuthTagBytes": 16,
+  "lengthHmacBytes": 32,
+  "lengthKeyBytes": 32,
+  "lengthPointBytes": 33,
+  "lengthVersionBytes": 1,
+  "lengthsHopPayloadsBytes": [1300, 32768],
+  "minPaymentPayloadByteLength": 2,
+  "typeBlindedNodeIdKey": "blinded_node_id",
+  "typeEncryptedRecipientData": "4",
+  "typeMuKey": "mu",
+  "typeNextNodeId": "4",
+  "typeNextPathKeyOverride": "8",
+  "typePadKey": "pad",
+  "typeReplyPath": "2",
+  "typeRhoKey": "rho",
+  "version": 0
+}
