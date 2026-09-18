@@ -9,7 +9,10 @@ const decryptBlindedPath = require('./decrypt_blinded_path');
 const decryptHopData = require('./decrypt_hop_data');
 const encodeBlindedPath = require('./encode_blinded_path');
 const encodeEdge = require('./encode_edge');
+const encodePaymentConstraints = require('./encode_payment_constraints');
+const encodePaymentRelay = require('./encode_payment_relay');
 const padHopData = require('./pad_hop_data');
+const paymentPathFromChannels = require('./payment_path_from_channels');
 
 module.exports = {
   blindHop,
@@ -23,5 +26,8 @@ module.exports = {
   decryptHopData,
   encodeBlindedPath,
   encodeEdge,
+  encodePaymentConstraints,
+  encodePaymentRelay,
   padHopData,
+  paymentPathFromChannels,
 };

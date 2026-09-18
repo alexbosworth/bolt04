@@ -1,5 +1,6 @@
 {
   "bitsPerByte": 8,
   "maxByteLength": 6,
+  "maxTruncatedByteLength": 8,
   "minByteLength": 1
 }

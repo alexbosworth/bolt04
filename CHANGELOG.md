@@ -1,5 +1,9 @@
 # Versions
 
+## 1.1.0
+
+- `paymentPathFromChannels`: Add method to blind a payment path with relay data
+
 ## 1.0.0
 
 - `blindedPathFromHops`: Add method to blind a path of nodes to a destination

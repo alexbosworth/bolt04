@@ -10,6 +10,8 @@ Utilities for working with Lightning Network [BOLT 04](https://github.com/lightn
     blinded path
 - [onionForPath](#onionforpath) - Construct an onion message packet to send
     into a published blinded path
+- [paymentPathFromChannels](#paymentpathfromchannels) - Blind a payment path
+    through channels to a destination with payment relay data
 
 ### blindedPathFromHops
 
@@ -148,5 +150,64 @@ const {id, key, onion} = onionForPath({
   outbound: [relayingPeerPublicKey, publishedFirstNodeId],
   records: [{type: '65537', value: message}],
   reply: [relayingPeerPublicKey, ownPublicKey],
+});
+```
+
+### paymentPathFromChannels
+
+Create a blinded payment path from a series of channels to a destination
+
+    {
+      [blocks_until_expiry]: <Blocks Until Path Expires Number>
+      channels: [{
+        id: <Standard Format Channel Id String>
+        policies: [{
+          base_fee_mtokens: <Base Fee Millitokens String>
+          cltv_delta: <Locktime Delta Number>
+          fee_rate: <Fees Charged in Millitokens Per Million Number>
+          max_htlc_mtokens: <Maximum HTLC Millitokens Value String>
+          min_htlc_mtokens: <Minimum HTLC Millitokens Value String>
+          public_key: <Node Identity Public Key Hex String>
+        }]
+      }]
+      cltv_delta: <Final Hop CLTV Delta Number>
+      current_block_height: <Current Block Height Number>
+      destination: <Destination Node Public Key Hex String>
+      [hop_count]: <Total Padding Inclusive Blinded Hop Count Number>
+      [id]: <Path Identifier Hex String>
+      max_mtokens: <Maximum Millitokens Number Allowed Through Path String>
+    }
+
+    @throws
+    <Error>
+
+    @returns
+    {
+      base_fee_mtokens: <Accumulated Base Fee Millitokens String>
+      cltv_delta: <Accumulated CLTV Expiry Delta Number>
+      fee_rate: <Accumulated Fee Rate Millitokens Per Million Number>
+      hops: [{
+        encrypted_data: <Encrypted Recipient Data Hex String>
+        relay_key: <Blinded Node Public Key Hex String>
+      }]
+      id: <Path Identifier Hex String>
+      introduction_node: <Introduction Node Public Key Hex String>
+      key: <First Hop Path Key Public Key Hex String>
+      max_htlc_mtokens: <Maximum HTLC Millitokens String>
+      min_htlc_mtokens: <Minimum HTLC Millitokens String>
+    }
+
+Example:
+
+```node
+const {paymentPathFromChannels} = require('bolt04');
+
+// Blind a path through a peer's channel to include in an invoice with its fees
+const path = paymentPathFromChannels({
+  channels: [{id: peerChannelId, policies: [peerPolicy, ownPolicy]}],
+  cltv_delta: finalCltvDelta,
+  current_block_height: currentBlockHeight,
+  destination: ownPublicKey,
+  max_mtokens: invoiceMtokens,
 });
 ```
