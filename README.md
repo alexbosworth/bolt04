@@ -173,6 +173,8 @@ Create a blinded payment path from a series of channels to a destination
       cltv_delta: <Final Hop CLTV Delta Number>
       current_block_height: <Current Block Height Number>
       destination: <Destination Node Public Key Hex String>
+      [receiver_base_fee_mtokens]: <Receiver Base Fee Millitokens String>
+      [receiver_fee_rate]: <Receiver Fee Rate Millitokens Per Million Number>
       [hop_count]: <Total Padding Inclusive Blinded Hop Count Number>
       [id]: <Path Identifier Hex String>
       max_mtokens: <Maximum Millitokens Number Allowed Through Path String>

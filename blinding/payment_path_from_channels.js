@@ -20,6 +20,7 @@ const {typeShortChannelId} = require('./constants');
 const bufferAsHex = buffer => buffer.toString('hex');
 const byteLength = hex => hex.length / 2;
 const {from} = Buffer;
+const hasFee = n => !!BigInt(n.base_fee_mtokens) || !!n.fee_rate;
 const hexAsBuffer = hex => from(hex, 'hex');
 const {isArray} = Array;
 const isChannelId = n => typeof n === 'string' && /^\d+x\d+x\d+$/.test(n);
@@ -31,6 +32,7 @@ const {isSafeInteger} = Number;
 const isUnsigned = n => isSafeInteger(n) && n >= Number();
 const larger = (a, b) => b > a ? b : a;
 const million = BigInt(1e6);
+const noBaseFee = '0';
 const noFees = {base: BigInt(Number()), rate: BigInt(Number())};
 const roundUp = n => (n + million - BigInt(1)) / million;
 const sumOf = arr => arr.reduce((sum, n) => sum + n, Number());
@@ -55,6 +57,8 @@ const sumOf = arr => arr.reduce((sum, n) => sum + n, Number());
     cltv_delta: <Final Hop CLTV Delta Number>
     current_block_height: <Current Block Height Number>
     destination: <Destination Node Public Key Hex String>
+    [receiver_base_fee_mtokens]: <Receiver Base Fee Millitokens String>
+    [receiver_fee_rate]: <Receiver Fee Rate Millitokens Per Million Number>
     [hop_count]: <Total Padding Inclusive Blinded Hop Count Number>
     [id]: <Path Identifier Hex String>
     max_mtokens: <Maximum Millitokens Number Allowed Through Path String>
@@ -132,6 +136,21 @@ module.exports = args => {
     throw new Error('ExpectedAmountMillitokensToCreatePaymentPath');
   }
 
+  // Receiver fees are the relay policy of a padding hop, which is the receiver
+  const receiverFee = {
+    base_fee_mtokens: args.receiver_base_fee_mtokens || noBaseFee,
+    cltv_delta: Number(),
+    fee_rate: args.receiver_fee_rate || Number(),
+  };
+
+  if (!isNumeric(receiverFee.base_fee_mtokens)) {
+    throw new Error('ExpectedReceiverBaseFeeMillitokensToCreatePaymentPath');
+  }
+
+  if (!isUnsigned(receiverFee.fee_rate)) {
+    throw new Error('ExpectedReceiverFeeRateToCreatePaymentPath');
+  }
+
   // Walking back from the destination, each channel is forwarded across by the
   // node on the channel that is not the next node towards the destination
   const forwards = args.channels.reduceRight((hops, channel) => {
@@ -185,14 +204,24 @@ module.exports = args => {
     throw new Error('ExpectedForwardingPolicyMinHtlcToCreatePaymentPath');
   }
 
+  const isTakingFees = hasFee(receiverFee);
   const lifetime = args.blocks_until_expiry || defaultLifetimeBlocks;
   const realHops = forwards.length + 1;
-  const targetHops = args.hop_count;
 
-  const dummies = targetHops === undefined ? Number() : targetHops - realHops;
+  // A padding hop is added to charge receiver fees when no hop count is given
+  const defaultHops = !isTakingFees ? realHops : realHops + 1;
+
+  const hopCount = args.hop_count === undefined ? defaultHops : args.hop_count;
+
+  const dummies = hopCount - realHops;
 
   if (dummies < Number()) {
     throw new Error('ExpectedHopCountAtLeastPathLengthToCreatePaymentPath');
+  }
+
+  // The final hop has no relay data, so receiver fees need a padding hop
+  if (isTakingFees && !dummies) {
+    throw new Error('ExpectedPaddingHopToCreatePaymentPath');
   }
 
   const amount = BigInt(args.max_mtokens);
@@ -245,17 +274,26 @@ module.exports = args => {
   });
 
   // Dummy hops loop back to the destination to obscure the true path length
-  const dummyRelay = encodePaymentRelay({
-    base_fee_mtokens: '0',
+  const noFeePolicy = {
+    base_fee_mtokens: noBaseFee,
     cltv_delta: Number(),
     fee_rate: Number(),
+  };
+
+  // The first dummy hop charges the receiver fees and the rest charge nothing
+  const dummyPolicies = [...Array(dummies)].map((n, i) => {
+    return !i ? receiverFee : noFeePolicy;
   });
 
-  const dummyRecords = [...Array(dummies)].map(() => [
-    {type: typeNextNodeId, value: args.destination},
-    {type: typePaymentRelay, value: bufferAsHex(dummyRelay.encoded)},
-    {type: typePaymentConstraints, value: constraints(expiryHeight)},
-  ]);
+  const dummyRecords = dummyPolicies.map(policy => {
+    const relay = encodePaymentRelay(policy);
+
+    return [
+      {type: typeNextNodeId, value: args.destination},
+      {type: typePaymentRelay, value: bufferAsHex(relay.encoded)},
+      {type: typePaymentConstraints, value: constraints(expiryHeight)},
+    ];
+  });
 
   // The final hop is given the path id and the constraints on the payment
   const finalRecords = [
@@ -285,8 +323,11 @@ module.exports = args => {
     })),
   });
 
-  // Fees accumulate from the last forwarding hop back to the introduction node
-  const fees = forwards.reduceRight((total, {policy}) => {
+  // The relaying hops are the forwarding hops followed by the dummy hops
+  const relays = forwards.map(n => n.policy).concat(dummyPolicies);
+
+  // Fees accumulate from the last relaying hop back to the introduction node
+  const fees = relays.reduceRight((total, policy) => {
     const base = BigInt(policy.base_fee_mtokens);
     const rate = BigInt(policy.fee_rate);
 
@@ -298,7 +339,7 @@ module.exports = args => {
 
   return {
     base_fee_mtokens: fees.base.toString(),
-    cltv_delta: sumOf(forwards.map(n => n.policy.cltv_delta)) + args.cltv_delta,
+    cltv_delta: sumOf(relays.map(n => n.cltv_delta)) + args.cltv_delta,
     fee_rate: Number(fees.rate),
     hops: path.hops.map(hop => ({
       encrypted_data: bufferAsHex(hop.encrypted_data),

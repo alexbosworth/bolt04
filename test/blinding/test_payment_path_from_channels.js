@@ -16,6 +16,7 @@ const invalidPoint = `02${'00'.repeat(32)}`;
 const isPathId = n => /^[0-9a-f]{64}$/.test(n);
 const isPublicKey = n => /^0[23][0-9a-f]{64}$/.test(n);
 const pathId = 'c9cf92f45ade68345bc20ae672e2012f4af487ed4415';
+const typeNextNodeId = '4';
 const typePadding = '1';
 const typePathId = '6';
 const typePaymentConstraints = '12';
@@ -144,6 +145,26 @@ const tests = [
     args: makeArgs({hop_count: 3}),
     description: 'A hop count must be at least the real path length',
     error: 'ExpectedHopCountAtLeastPathLengthToCreatePaymentPath',
+  },
+  {
+    args: makeArgs({receiver_base_fee_mtokens: 1000}),
+    description: 'A receiver base fee must be a millitokens string',
+    error: 'ExpectedReceiverBaseFeeMillitokensToCreatePaymentPath',
+  },
+  {
+    args: makeArgs({receiver_fee_rate: '200'}),
+    description: 'A receiver fee rate must be a number',
+    error: 'ExpectedReceiverFeeRateToCreatePaymentPath',
+  },
+  {
+    args: makeArgs({receiver_fee_rate: 200, hop_count: 4}),
+    description: 'Receiver fees require a padding hop to charge them',
+    error: 'ExpectedPaddingHopToCreatePaymentPath',
+  },
+  {
+    args: makeArgs({receiver_base_fee_mtokens: '4294967296'}),
+    description: 'A receiver base fee must fit in the payment relay data',
+    error: 'ExpectedBaseFeeWithinRangeToEncodePaymentRelay',
   },
   {
     args: makeArgs({max_mtokens: undefined}),
@@ -423,6 +444,98 @@ const tests = [
       introduction_node: bob.public_key,
       max_htlc_mtokens: '2',
       min_htlc_mtokens: '1',
+    },
+  },
+  {
+    args: makeArgs({
+      channels: [daveToEve],
+      receiver_base_fee_mtokens: '1000',
+      receiver_fee_rate: 200,
+    }),
+    description: 'A payment path is created with receiver fees',
+    expected: {
+      base_fee_mtokens: '1001',
+      cltv_delta: 43,
+      fee_rate: 301,
+      hops: [
+        {
+          channel: '0x0x3',
+          private_key: dave.private_key,
+          records: [
+            {type: typeShortChannelId, value: '0000000000000003'},
+            {type: typePaymentRelay, value: '001900000064'},
+            {type: typePaymentConstraints, value: '000b71c932'},
+          ],
+        },
+        {
+          private_key: eve.private_key,
+          records: [
+            {type: typeNextNodeId, value: eve.public_key},
+            {type: typePaymentRelay, value: '0000000000c803e8'},
+            {type: typePaymentConstraints, value: '000b71b032'},
+          ],
+        },
+        {
+          private_key: eve.private_key,
+          records: [
+            {type: typePaymentConstraints, value: '000b71b032'},
+          ],
+        },
+      ],
+      id: pathId,
+      introduction_node: dave.public_key,
+      max_htlc_mtokens: '100000',
+      min_htlc_mtokens: '50',
+    },
+  },
+  {
+    args: makeArgs({
+      channels: [daveToEve],
+      receiver_base_fee_mtokens: '1000',
+      hop_count: 4,
+    }),
+    description: 'Receiver fees are charged by the first of the padding hops',
+    expected: {
+      base_fee_mtokens: '1001',
+      cltv_delta: 43,
+      fee_rate: 100,
+      hops: [
+        {
+          channel: '0x0x3',
+          private_key: dave.private_key,
+          records: [
+            {type: typeShortChannelId, value: '0000000000000003'},
+            {type: typePaymentRelay, value: '001900000064'},
+            {type: typePaymentConstraints, value: '000b71c932'},
+          ],
+        },
+        {
+          private_key: eve.private_key,
+          records: [
+            {type: typeNextNodeId, value: eve.public_key},
+            {type: typePaymentRelay, value: '00000000000003e8'},
+            {type: typePaymentConstraints, value: '000b71b032'},
+          ],
+        },
+        {
+          private_key: eve.private_key,
+          records: [
+            {type: typeNextNodeId, value: eve.public_key},
+            {type: typePaymentRelay, value: '000000000000'},
+            {type: typePaymentConstraints, value: '000b71b032'},
+          ],
+        },
+        {
+          private_key: eve.private_key,
+          records: [
+            {type: typePaymentConstraints, value: '000b71b032'},
+          ],
+        },
+      ],
+      id: pathId,
+      introduction_node: dave.public_key,
+      max_htlc_mtokens: '100000',
+      min_htlc_mtokens: '50',
     },
   },
 ];
