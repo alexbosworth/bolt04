@@ -3,14 +3,13 @@ const {randomBytes} = require('node:crypto');
 const {isPoint} = require('tiny-secp256k1');
 const {rawChanId} = require('bolt07');
 
-const createBlindedPath = require('./create_blinded_path');
+const blindHopRecords = require('./blind_hop_records');
 const {defaultLifetimeBlocks} = require('./constants');
 const encodePaymentConstraints = require('./encode_payment_constraints');
 const encodePaymentRelay = require('./encode_payment_relay');
 const {lengthPathIdBytes} = require('./constants');
 const {lengthPointBytes} = require('./constants');
 const {minHtlcMtokens} = require('./constants');
-const padHopData = require('./pad_hop_data');
 const {typeNextNodeId} = require('./constants');
 const {typePathId} = require('./constants');
 const {typePaymentConstraints} = require('./constants');
@@ -21,7 +20,6 @@ const bufferAsHex = buffer => buffer.toString('hex');
 const byteLength = hex => hex.length / 2;
 const {from} = Buffer;
 const hasFee = n => !!BigInt(n.base_fee_mtokens) || !!n.fee_rate;
-const hexAsBuffer = hex => from(hex, 'hex');
 const {isArray} = Array;
 const isChannelId = n => typeof n === 'string' && /^\d+x\d+x\d+$/.test(n);
 const isHex = n => !(n.length % 2) && /^[0-9A-F]*$/i.test(n);
@@ -303,9 +301,6 @@ module.exports = args => {
 
   const records = relayingRecords.concat(dummyRecords).concat([finalRecords]);
 
-  // Every hop gets data of the same length so that the hops look alike
-  const {data} = padHopData({records});
-
   // Dummy hops repeat the destination so it peels and ignores them on receipt
   const dummyKeys = [...Array(dummies)].map(() => args.destination);
 
@@ -316,10 +311,10 @@ module.exports = args => {
   // The introduction node is the first forwarding node, reached unblinded
   const [introductionNode] = publicKeys;
 
-  const path = createBlindedPath({
+  const blinded = blindHopRecords({
     hops: publicKeys.map((publicKey, i) => ({
-      data: data[i],
-      public_key: hexAsBuffer(publicKey),
+      public_key: publicKey,
+      records: records[i],
     })),
   });
 
@@ -341,13 +336,10 @@ module.exports = args => {
     base_fee_mtokens: fees.base.toString(),
     cltv_delta: sumOf(relays.map(n => n.cltv_delta)) + args.cltv_delta,
     fee_rate: Number(fees.rate),
-    hops: path.hops.map(hop => ({
-      encrypted_data: bufferAsHex(hop.encrypted_data),
-      relay_key: bufferAsHex(hop.blinded_public_key),
-    })),
+    hops: blinded.path,
     id: pathId,
     introduction_node: introductionNode,
-    key: bufferAsHex(path.key),
+    key: blinded.key,
     max_htlc_mtokens: amount.toString(),
     min_htlc_mtokens: minHtlc.toString(),
   };

@@ -6,6 +6,8 @@ Utilities for working with Lightning Network [BOLT 04](https://github.com/lightn
 
 - [blindedPathFromHops](#blindedpathfromhops) - Blind a path of nodes to a
     destination that ends with a path id
+- [blindedPathToNode](#blindedpathtonode) - Blind a path of nodes culminating
+    in a destination
 - [decryptBlindedPath](#decryptblindedpath) - Decrypt the data of a hop in a
     blinded path
 - [onionForPath](#onionforpath) - Construct an onion message packet to send
@@ -44,6 +46,37 @@ const {blindedPathFromHops} = require('bolt04');
 
 // Blind a path through a forwarding node to the destination with a path id
 const {id, key, path} = blindedPathFromHops({
+  hops: [forwardingNodePublicKey, destinationNodePublicKey],
+});
+```
+
+### blindedPathToNode
+
+Create a blinded path from a series of hops culminating in a destination
+
+    {
+      hops: [<Relaying Node Public Key Hex String>]
+    }
+
+    @throws
+    <Error>
+
+    @returns
+    {
+      key: <Path Key Hex String>
+      path: [{
+        encrypted_data: <Encrypted Data Hex String>
+        relay_key: <Blinded Node Public Key Hex String>
+      }]
+    }
+
+Example:
+
+```node
+const {blindedPathToNode} = require('bolt04');
+
+// Blind a path through a forwarding node to a destination node id
+const {key, path} = blindedPathToNode({
   hops: [forwardingNodePublicKey, destinationNodePublicKey],
 });
 ```

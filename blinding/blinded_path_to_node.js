@@ -1,14 +1,9 @@
-const {randomBytes} = require('node:crypto');
-
 const {isPoint} = require('tiny-secp256k1');
 
 const blindHopRecords = require('./blind_hop_records');
-const {lengthPathIdBytes} = require('./constants');
 const {lengthPointBytes} = require('./constants');
 const {typeNextNodeId} = require('./constants');
-const {typePathId} = require('./constants');
 
-const bufferAsHex = buffer => buffer.toString('hex');
 const byteLength = hex => hex.length / 2;
 const {from} = Buffer;
 const {isArray} = Array;
@@ -16,13 +11,10 @@ const isHex = n => !(n.length % 2) && /^[0-9A-F]*$/i.test(n);
 const isHexString = n => typeof n === 'string' && isHex(n);
 const isPublicKey = n => isPoint(from(n, 'hex'));
 
-/** Create a blinded path from a series of hops to a destination
-
-  The final hop is the destination, which is given a path `id` for reference.
+/** Create a blinded path from a series of hops culminating in a destination
 
   {
-    hops: [<Relaying Node Public Key Id Hex String>]
-    [id]: <Path Identifier Hex String>
+    hops: [<Relaying Node Public Key Hex String>]
   }
 
   @throws
@@ -30,7 +22,6 @@ const isPublicKey = n => isPoint(from(n, 'hex'));
 
   @returns
   {
-    id: <Path Identifier Hex String>
     key: <Path Key Hex String>
     path: [{
       encrypted_data: <Encrypted Data Hex String>
@@ -38,35 +29,29 @@ const isPublicKey = n => isPoint(from(n, 'hex'));
     }]
   }
 */
-module.exports = ({hops, id}) => {
+module.exports = ({hops}) => {
   if (!isArray(hops) || !hops.length) {
-    throw new Error('ExpectedArrayOfHopsToBlindPath');
+    throw new Error('ExpectedArrayOfHopsToBlindPathToNode');
   }
 
   if (!hops.every(isHexString)) {
-    throw new Error('ExpectedHexEncodedHopPublicKeyToBlindPath');
+    throw new Error('ExpectedHexEncodedHopPublicKeyToBlindPathToNode');
   }
 
   if (!hops.every(n => byteLength(n) === lengthPointBytes)) {
-    throw new Error('ExpectedCompressedHopPublicKeyToBlindPath');
+    throw new Error('ExpectedCompressedHopPublicKeyToBlindPathToNode');
   }
 
   if (!hops.every(isPublicKey)) {
-    throw new Error('ExpectedValidHopPublicKeyToBlindPath');
+    throw new Error('ExpectedValidHopPublicKeyToBlindPathToNode');
   }
 
-  if (!!id && !isHexString(id)) {
-    throw new Error('ExpectedHexEncodedPathIdToBlindPath');
-  }
-
-  const pathId = id || bufferAsHex(randomBytes(lengthPathIdBytes));
-
-  // Forwarding hops are told the next node, the final hop is given the path id
+  // Forwarding hops are told the next node, the final hop is given no records
   const records = hops.map((publicKey, i) => {
     const next = hops[i + 1];
 
     if (!next) {
-      return [{type: typePathId, value: pathId}];
+      return [];
     }
 
     return [{type: typeNextNodeId, value: next}];
@@ -79,5 +64,5 @@ module.exports = ({hops, id}) => {
     })),
   });
 
-  return {id: pathId, key: blinded.key, path: blinded.path};
+  return {key: blinded.key, path: blinded.path};
 };

@@ -1,5 +1,10 @@
 # Versions
 
+## 1.3.0
+
+- `blindedPathToNode`: Add method to blind a path of nodes culminating in a
+    destination
+
 ## 1.2.0
 
 - `paymentPathFromChannels`: Add `receiver_base_fee_mtokens`,

@@ -1,5 +1,7 @@
 const blindHop = require('./blind_hop');
+const blindHopRecords = require('./blind_hop_records');
 const blindedPathFromHops = require('./blinded_path_from_hops');
+const blindedPathToNode = require('./blinded_path_to_node');
 const createBlindedPath = require('./create_blinded_path');
 const decodeBlindedPath = require('./decode_blinded_path');
 const decodeEdge = require('./decode_edge');
@@ -16,7 +18,9 @@ const paymentPathFromChannels = require('./payment_path_from_channels');
 
 module.exports = {
   blindHop,
+  blindHopRecords,
   blindedPathFromHops,
+  blindedPathToNode,
   createBlindedPath,
   decodeBlindedPath,
   decodeEdge,
